@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Гра Принцеса та Платформи</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: linear-gradient(135deg, #ff7e5f, #feb47b);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: 'Arial', sans-serif;
+      color: white;
+    }
+    .game-container {
+      width: 600px;
+      height: 400px;
+      background-color: #222;
+      position: relative;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    .princess {
+      width: 50px;
+      height: 60px;
+      background-image: url('https://via.placeholder.com/50x60?text=Princess'); /* Замінити на зображення принцеси */
+      background-size: cover;
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      transition: transform 0.2s ease-out;
+    }
+    .platform {
+      width: 100px;
+      height: 10px;
+      background-color: #4caf50;
+      position: absolute;
+    }
+    .scoreboard {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 20px;
+    }
+    .button {
+      padding: 10px 20px;
+      background-color: #feb47b;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      position: absolute;
+      top: 80%;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .button:hover {
+      background-color: #ff7e5f;
+    }
+    .controls {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 15px;
+    }
+    .control-button {
+      background-color: #4caf50;
+      padding: 10px 20px;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .control-button:hover {
+      background-color: #3e8e41;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <div class="princess" id="princess"></div>
+    <div class="scoreboard" id="score">Результат: 0</div>
+    <button class="button" id="restartButton" onclick="restartGame()">Перезапустити</button>
+
+    <div class="controls">
+      <button class="control-button" id="moveLeft">Вліво</button>
+      <button class="control-button" id="jump">Стрибок</button>
+      <button class="control-button" id="moveRight">Вправо</button>
+    </div>
+  </div>
+
+  <script>
+    const princess = document.getElementById('princess');
+    const scoreBoard = document.getElementById('score');
+    const restartButton = document.getElementById('restartButton');
+    const moveLeftButton = document.getElementById('moveLeft');
+    const moveRightButton = document.getElementById('moveRight');
+    const jumpButton = document.getElementById('jump');
+    let score = 0;
+    let isJumping = false;
+    let gravity = 0.6;
+    let jumpPower = -12;
+    let princessPosition = { x: 275, y: 340 }; // Початкова позиція принцеси
+    let platforms = [];
+    let isGameOver = false;
+
+    // Завантажуємо збережений результат
+    if (localStorage.getItem('bestScore')) {
+      score = localStorage.getItem('bestScore');
+      scoreBoard.innerHTML = `Результат: ${score}`;
+    }
+
+    // Створення платформ
+    function createPlatform() {
+      const platform = document.createElement('div');
+      platform.classList.add('platform');
+      platform.style.top = Math.random() * 200 + 'px';
+      platform.style.left = Math.random() * (600 - 100) + 'px';
+      document.querySelector('.game-container').appendChild(platform);
+      platforms.push(platform);
+    }
+
+    // Стрибок принцеси
+    function jump() {
+      if (!isJumping) {
+        isJumping = true;
+        let jumpHeight = jumpPower;
+        let jumpInterval = setInterval(() => {
+          if (jumpHeight < 0) {
+            clearInterval(jumpInterval);
+            isJumping = false;
+          }
+          princess.style.transform = `translateY(${jumpHeight}px)`;
+          jumpHeight += gravity;
+        }, 20);
+      }
+    }
+
+    // Переміщення вліво
+    function moveLeft() {
+      if (princessPosition.x > 0) {
+        princessPosition.x -= 10;
+        princess.style.left = princessPosition.x + 'px';
+      }
+    }
+
+    // Переміщення вправо
+    function moveRight() {
+      if (princessPosition.x < 550) { // 600px - ширина персонажа
+        princessPosition.x += 10;
+        princess.style.left = princessPosition.x + 'px';
+      }
+    }
+
+    // Логіка оновлення гри
+    function updateGame() {
+      if (isGameOver) return;
+
+      platforms.forEach((platform, index) => {
+        const platformRect = platform.getBoundingClientRect();
+        if (platformRect.bottom > window.innerHeight) {
+          platform.style.top = '0px';
+          platform.style.left = Math.random() * (600 - 100) + 'px';
+        }
+
+        const princessRect = princess.getBoundingClientRect();
+        if (princessRect.bottom <= platformRect.top &&
+          princessRect.bottom >= platformRect.top - 10 &&
+          princessRect.left + princessRect.width >= platformRect.left &&
+          princessRect.left <= platformRect.left + platformRect.width) {
+          score++;
+          scoreBoard.innerHTML = `Результат: ${score}`;
+          if (score > localStorage.getItem('bestScore')) {
+            localStorage.setItem('bestScore', score);
+          }
+        }
+      });
+    }
+
+    // Перезапуск гри
+    function restartGame() {
+      isGameOver = false;
+      score = 0;
+      scoreBoard.innerHTML = `Результат: ${score}`;
+      platforms = [];
+      document.querySelectorAll('.platform').forEach(platform => platform.remove());
+      createPlatform();
+    }
+
+    // Слухачі подій для кнопок
+    moveLeftButton.addEventListener('click', moveLeft);
+    moveRightButton.addEventListener('click', moveRight);
+    jumpButton.addEventListener('click', jump);
+
+    // Слухачі подій для клавіатури
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'ArrowLeft') {
+        moveLeft();
+      } else if (e.code === 'ArrowRight') {
+        moveRight();
+      } else if (e.code === 'Space') {
+        jump();
+      }
+    });
+
+    setInterval(() => {
+      if (!isGameOver) {
+        createPlatform();
+        updateGame();
+      }
+    }, 2000);
+  </script>
+</body>
+</html>
